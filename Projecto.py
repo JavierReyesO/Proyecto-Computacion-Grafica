@@ -30,6 +30,7 @@
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
+from PIL import Image
 import sys
 import numpy
 import ast
@@ -54,9 +55,14 @@ vertices['e'] = [-1.0, 1.0, 0.0]
 vertices['f'] = [1.0, 1.0, 0.0]
 vertices['g'] = [-1.0, -1.0, 0.0]
 vertices['h'] = [1.0, -1.0, 0.0]
-vNames = ['a','b','c','d','e','f','g','h']
+vNames = ['a','b','c','d','e','f','g']
 currentV = 0
 currentM = 1
+pickV = 0.1
+textures = []
+ready = False
+time = 0
+sentido = 0
 
 vertices2 = {}
 vertices2['a'] = [-1.0, 1.0, 0.0]
@@ -82,6 +88,19 @@ def InitGL(Width, Height):				# We call this right after our OpenGL window is cr
     glDepthFunc(GL_LESS)				# The Type Of Depth Test To Do
     glEnable(GL_DEPTH_TEST)				# Enables Depth Testing
     glShadeModel(GL_SMOOTH)				# Enables Smooth Color Shading
+
+    images = []
+
+    for x in xrange(1,101):
+    	images.append("Fractal/Julia"+ str(x) + ".bmp")
+
+    '''images = [
+    			"Fractal/Julia1.bmp",
+    			"Fractal/Julia2.bmp",
+    			"Fractal/Julia3.bmp",
+    		]'''
+
+    LoadTextures(images)
 	
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()					# Reset The Projection Matrix
@@ -101,21 +120,86 @@ def ReSizeGLScene(Width, Height):
     gluPerspective(45.0, float(Width)/float(Height), 0.1, 100.0)
     glMatrixMode(GL_MODELVIEW)
 
+def DrawColorQuad(v1, v2, v3, v4, color):
+	glBegin(GL_QUADS)
+	glColor3f(color[0], color[1], color[2])
+	glVertex3f(v1[0], v1[1], v1[2])
+	glVertex3f(v2[0], v2[1], v2[2])
+	glVertex3f(v3[0], v3[1], v3[2])
+	glVertex3f(v4[0], v4[1], v4[2])
+	glEnd()
+	glColor3f(1.0, 1.0, 1.0)
 
+def DrawTextureQuad(v1, v2, v3, v4, t):
+	# print 'Using buffer %s with texture %s' % (buffers[t], textures[t])
+	# glBindFramebuffer(GL_FRAMEBUFFER, buffers[t])
+	glActiveTexture(GL_TEXTURE0+(t%8))
+	glEnable(GL_TEXTURE_2D)
+	glBindTexture(GL_TEXTURE_2D, textures[t])
+	glBegin(GL_QUADS)				# Start Drawing The Quad
+	glMultiTexCoord2f(GL_TEXTURE0+t, 0.0, 1.0); glVertex3f(v1[0], v1[1], v1[2])
+	glMultiTexCoord2f(GL_TEXTURE0+t, 1.0, 1.0); glVertex3f(v2[0], v2[1], v2[2])
+	glMultiTexCoord2f(GL_TEXTURE0+t, 1.0, 0.0); glVertex3f(v3[0], v3[1], v3[2])
+	glMultiTexCoord2f(GL_TEXTURE0+t, 0.0, 0.0); glVertex3f(v4[0], v4[1], v4[2])
+	glEnd()				# Done Drawing The Quad
+	glBindFramebuffer(GL_FRAMEBUFFER, 0)
+	glBindTexture(GL_TEXTURE_2D, 0)
+
+
+def LoadTextures(images):
+	glTextures = glGenTextures(len(images))
+	for path in images:
+		print 'binding texture %s as %s' % (path, glTextures[len(textures)])
+		image = Image.open(path)
+		ix = image.size[0]
+		iy = image.size[1]
+		image = image.tobytes("raw", "RGBX", 0, -1)
+		glBindTexture(GL_TEXTURE_2D, glTextures[len(textures)])
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ix, iy, 0, GL_RGBA, GL_UNSIGNED_BYTE, image)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+		textures.append(glTextures[len(textures)])
+		glBindTexture(GL_TEXTURE_2D, 0)
 
 # The main drawing function. 
 def DrawGLScene():
-	global vertices, vNames, currentV, currentTime, vertices2
+	global vertices, vNames, currentV, currentTime, vertices2, textures, time, sentido
 
 	# Clear The Screen And The Depth Buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 	glLoadIdentity()					# Reset The View 
 
 	#Move into the screen 6.0 units.
-	glTranslatef(0.0, 0.0, -6.0)
+	glTranslatef(0.0, 0.0, -5.0)
 
-	# TOP
-	glBegin(GL_QUADS)                   # Start drawing a 4 sided polygon
+	if not ready:
+		#CUBO 1
+		DrawColorQuad(vertices['a'], vertices['b'], vertices['f'], vertices['e'], [0.0,1.0,0.0])
+		DrawColorQuad(vertices['a'], vertices['b'], vertices['d'], vertices['c'], [1.0,0.0,0.0])
+		DrawColorQuad(vertices['a'], vertices['e'], vertices['g'], vertices['c'], [0.0,0.0,1.0])
+
+	#DrawColorQuad(vertices2['a'], vertices2['b'], vertices2['f'], vertices2['e'], [0.0,1.0,0.0])
+	#DrawColorQuad(vertices2['a'], vertices2['b'], vertices2['d'], vertices2['c'], [1.0,0.0,0.0])
+	#DrawColorQuad(vertices2['a'], vertices2['e'], vertices2['g'], vertices2['c'], [0.0,0.0,1.0])
+
+	else:
+		DrawTextureQuad(vertices['a'], vertices['b'], vertices['f'], vertices['e'], time)
+		DrawTextureQuad(vertices['a'], vertices['b'], vertices['d'], vertices['c'], 1)
+		DrawTextureQuad(vertices['a'], vertices['e'], vertices['g'], vertices['c'], 2)
+
+	if sentido == 0 and time < 100:
+		time+=1
+	else:
+		time-=1
+
+
+
+	'''if time == 0:
+		sentido = 0
+	if time == 100:
+		sentido = 1	'''
+
+	'''glBegin(GL_QUADS)                   # Start drawing a 4 sided polygon
 	glColor3f(0.0,1.0,0.0)			# Set The Color To Green
 	glVertex3f(vertices['a'][0],vertices['a'][1],vertices['a'][2])
 	glVertex3f(vertices['b'][0],vertices['b'][1],vertices['b'][2])
@@ -183,16 +267,18 @@ def DrawGLScene():
 	glVertex3f(vertices2['e'][0],vertices2['e'][1],vertices2['e'][2])
 	glVertex3f(vertices2['g'][0],vertices2['g'][1],vertices2['g'][2])
 	glVertex3f(vertices2['c'][0],vertices2['c'][1],vertices2['c'][2])
-	glEnd() 
+	glEnd() '''
 
 	#  since this is double buffered, swap the buffers to display what just got drawn. 
 	glutSwapBuffers()
+
+	
 
 
 
 # The function called whenever a key is pressed. Note the use of Python tuples to pass in: (key, x, y)  
 def keyPressed(*args):
-	global vertices, vNames, currentV, rquadSum, vertices_actual, currentM, vertices2
+	global vertices, vNames, currentV, rquadSum, vertices_actual, currentM, vertices2, pickV, ready
 	# If escape is pressed, kill everything.
 	if args[0] == ESCAPE:
 		glutDestroyWindow(window)
@@ -200,21 +286,28 @@ def keyPressed(*args):
 
 	# X axis
 	elif args[0] == 'a':
-		vertices_actual[vNames[currentV]][0]-=0.1
+		vertices_actual[vNames[currentV]][0]-=pickV
 	elif args[0] == 'd':
-		vertices_actual[vNames[currentV]][0]+=0.1
+		vertices_actual[vNames[currentV]][0]+=pickV
 		
 	# Y axis
 	elif args[0] == 's':
-		vertices_actual[vNames[currentV]][1]-=0.1
+		vertices_actual[vNames[currentV]][1]-=pickV
 	elif args[0] == 'w':
-		vertices_actual[vNames[currentV]][1]+=0.1
+		vertices_actual[vNames[currentV]][1]+=pickV
 
 	# Z axis
 	elif args[0] == 'e':
-		vertices_actual[vNames[currentV]][2]-=0.1
+		vertices_actual[vNames[currentV]][2]-=pickV
 	elif args[0] == 'q':
-		vertices_actual[vNames[currentV]][2]+=0.1
+		vertices_actual[vNames[currentV]][2]+=pickV
+
+	# change pickV
+	elif args[0] == 'm':
+		if pickV == 0.1 :
+			pickV = 0.05
+		else :
+			pickV = 0.1
 
 	# change vertix
 	elif args[0] == 'p':
@@ -264,6 +357,10 @@ def keyPressed(*args):
 	
 		vertices2 = aux_vert2
 		currentV = 0
+
+	elif args[0] == ' ':
+		if not ready:
+			ready = True
 			
 
 def main():

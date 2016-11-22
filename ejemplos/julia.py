@@ -39,4 +39,4 @@ for y in range(imgy):
             z = z * z + c
         image.putpixel((x, y), (i % 8 * 32, i % 16 * 16, i % 32 * 8))
 
-image.save("juliaFr.png", "PNG")
+image.save("juliaFr3.bmp", "BMP")

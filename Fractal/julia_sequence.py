@@ -26,7 +26,7 @@ for c_im in numpy.arange(0.0, 1.0, 0.01):
     frame += 1
      
     # Open file and write PGM header info
-    filename = "{0:03d}.pgm".format(frame)
+    filename = "Julia{0:01d}.pgm".format(frame)
     print filename
     fout = open(filename, 'w')
     fout.write('P2\n# Julia Set image\n' + str(w) + ' ' + str(h) + '\n255\n')

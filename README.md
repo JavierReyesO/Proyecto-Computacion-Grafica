@@ -1,2 +1,2 @@
 # Proyecto-Computacion-Grafica
-Proyecto de Computación Gráfica proyección en un superficie tridimensional.
+Proyecto de Computación Gráfica proyección en una superficie tridimensional (Cubo).
